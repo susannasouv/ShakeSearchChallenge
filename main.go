@@ -80,5 +80,5 @@ func (s *Searcher) Search(query string) []string {
 	for _, idx := range idxs {
 		results = append(results, s.CompleteWorks[idx-250:idx+250])
 	}
-	return results
+	return results[:20]
 }
