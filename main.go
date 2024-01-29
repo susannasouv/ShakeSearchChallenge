@@ -87,8 +87,8 @@ func (s *Searcher) Search(query string) []string {
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(initialQuery)), -1)...)
 	// Find capitalized form of query
 	r := []rune(initialQuery)
-    r[0] = unicode.ToUpper(r[0])
-    capitalizedQuery := string(r)
+	r[0] = unicode.ToUpper(r[0])
+	capitalizedQuery := string(r)
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(capitalizedQuery), -1)...)
 	results := []string{}
 	for _, idx := range idxs {
