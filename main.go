@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"unicode"
 )
 
 func main() {
@@ -74,13 +75,35 @@ func (s *Searcher) Load(filename string) error {
 }
 
 func (s *Searcher) Search(query string) []string {
-	idxs := s.SuffixArray.Lookup([]byte(strings.ToUpper(query)), -1)
-	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(query)), -1)...)
+	initialQuery := query
+	restOfQuery := ""
+	if strings.Contains(query, " ") {
+		substrings := strings.SplitAfterN(query, " ", 2)
+		initialQuery = strings.TrimSpace(substrings[0])
+		restOfQuery = strings.TrimSpace(substrings[1])
+	}
+	// Find the first word of the query in uppercase, lowercase, and capitalized forms since those are likely the only valid forms
+	idxs := s.SuffixArray.Lookup([]byte(strings.ToUpper(initialQuery)), -1)
+	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(initialQuery)), -1)...)
+	// Find capitalized form of query
+	r := []rune(initialQuery)
+    r[0] = unicode.ToUpper(r[0])
+    capitalizedQuery := string(r)
+	idxs = append(idxs, s.SuffixArray.Lookup([]byte(capitalizedQuery), -1)...)
 	results := []string{}
 	for _, idx := range idxs {
-		results = append(results, s.CompleteWorks[idx-250:idx+250])
+		fullQuery := initialQuery
+		if len(restOfQuery) > 0 {
+			queryParts := []string{initialQuery, restOfQuery}
+			fullQuery = strings.Join(queryParts, " ")
+		}
+		result := s.CompleteWorks[idx:(idx + len(fullQuery))]
+		if strings.Contains(strings.ToLower(result), strings.ToLower(fullQuery)) {
+			results = append(results, s.CompleteWorks[idx-250:idx+250])
+		}
 	}
-	if len(results) >= 20 {
+	
+	if len(results) > 20 {
 		return results[:20]
 	}
 	return results
