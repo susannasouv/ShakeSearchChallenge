@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -44,13 +46,32 @@ type Searcher struct {
 
 func handleSearch(searcher Searcher) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		limit := 20
+		offset := 0
 		query, ok := r.URL.Query()["q"]
+		queryObj := r.URL.Query()
+		limitParam := queryObj.Get("limit")
+		offsetParam := queryObj.Get("offset")
+		if len(limitParam) > 0 {
+			convertedInt, err := strconv.Atoi(limitParam)
+			if err == nil {
+				limit = convertedInt
+			}
+		}
+
+		if len(offsetParam) > 0 {
+			convertedInt, err := strconv.Atoi(offsetParam)
+			if err == nil {
+				offset = convertedInt
+			}
+		}
+
 		if !ok || len(query[0]) < 1 {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("missing search query in URL params"))
 			return
 		}
-		results := searcher.Search(query[0])
+		results := searcher.Search(query[0], limit, offset)
 		buf := &bytes.Buffer{}
 		enc := json.NewEncoder(buf)
 		err := enc.Encode(results)
@@ -74,7 +95,7 @@ func (s *Searcher) Load(filename string) error {
 	return nil
 }
 
-func (s *Searcher) Search(query string) []string {
+func (s *Searcher) Search(query string, limit int, offset int) []string {
 	initialQuery := query
 	restOfQuery := ""
 	if strings.Contains(query, " ") {
@@ -83,6 +104,7 @@ func (s *Searcher) Search(query string) []string {
 		restOfQuery = strings.TrimSpace(substrings[1])
 	}
 	// Find the first word of the query in uppercase, lowercase, and capitalized forms since those are likely the only valid forms
+	maxNumberOfResults := limit + offset
 	idxs := s.SuffixArray.Lookup([]byte(strings.ToUpper(initialQuery)), -1)
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(initialQuery)), -1)...)
 	// Find capitalized form of query
@@ -90,6 +112,7 @@ func (s *Searcher) Search(query string) []string {
 	r[0] = unicode.ToUpper(r[0])
 	capitalizedQuery := string(r)
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(capitalizedQuery), -1)...)
+	sort.Ints(idxs)
 	results := []string{}
 	for _, idx := range idxs {
 		fullQuery := initialQuery
@@ -99,12 +122,19 @@ func (s *Searcher) Search(query string) []string {
 		}
 		result := s.CompleteWorks[idx:(idx + len(fullQuery))]
 		if strings.Contains(strings.ToLower(result), strings.ToLower(fullQuery)) {
-			results = append(results, s.CompleteWorks[idx-250:idx+250])
+			beginningIndex := idx - 250
+			endingIndex := idx + 250
+			if beginningIndex < 0 {
+				beginningIndex = 0
+			}
+			if endingIndex > len(s.CompleteWorks) {
+				endingIndex = len(s.CompleteWorks) - 1
+			}
+			results = append(results, s.CompleteWorks[beginningIndex:endingIndex])
 		}
-	}
-	
-	if len(results) > 20 {
-		return results[:20]
+		if len(results) == maxNumberOfResults {
+			break
+		}
 	}
 	return results
 }
