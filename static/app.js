@@ -1,4 +1,16 @@
 const Controller = {
+  loadMore: (ev) => {
+    ev.preventDefault();
+    const form = document.getElementById("form");
+    const data = Object.fromEntries(new FormData(form));
+    const numberOfRows = document.querySelectorAll('#table-body tr').length
+    const response = fetch(`/search?q=${data.query}&limit=20&offset=${numberOfRows}`).then((response) => {
+      response.json().then((results) => {
+        Controller.updateTable(results);
+      });
+    });
+
+  },
   search: (ev) => {
     ev.preventDefault();
     const form = document.getElementById("form");
@@ -22,3 +34,4 @@ const Controller = {
 
 const form = document.getElementById("form");
 form.addEventListener("submit", Controller.search);
+document.getElementById("load-more").onclick = Controller.loadMore;
