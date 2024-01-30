@@ -98,12 +98,14 @@ func (s *Searcher) Load(filename string) error {
 func (s *Searcher) Search(query string, limit int, offset int) []string {
 	initialQuery := query
 	restOfQuery := ""
+	// Handling for multi-word query
 	if strings.Contains(query, " ") {
 		substrings := strings.SplitAfterN(query, " ", 2)
 		initialQuery = strings.TrimSpace(substrings[0])
 		restOfQuery = strings.TrimSpace(substrings[1])
 	}
-	// Find the first word of the query in uppercase, lowercase, and capitalized forms since those are likely the only valid forms
+	// Find the first word of the query in uppercase, lowercase, and capitalized forms
+	// since those are likely the only valid forms
 	maxNumberOfResults := limit + offset
 	idxs := s.SuffixArray.Lookup([]byte(strings.ToUpper(initialQuery)), -1)
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(initialQuery)), -1)...)
@@ -112,6 +114,7 @@ func (s *Searcher) Search(query string, limit int, offset int) []string {
 	r[0] = unicode.ToUpper(r[0])
 	capitalizedQuery := string(r)
 	idxs = append(idxs, s.SuffixArray.Lookup([]byte(capitalizedQuery), -1)...)
+
 	sort.Ints(idxs)
 	results := []string{}
 	for _, idx := range idxs {

@@ -1,10 +1,13 @@
 const Controller = {
-  loadMore: (ev) => {
-    ev.preventDefault();
+  getQuery: () => {
     const form = document.getElementById("form");
     const data = Object.fromEntries(new FormData(form));
+    return data.query
+  },
+  loadMore: (ev) => {
+    ev.preventDefault();
     const numberOfRows = document.querySelectorAll('#table-body tr').length
-    const response = fetch(`/search?q=${data.query}&limit=20&offset=${numberOfRows}`).then((response) => {
+    fetch(`/search?q=${Controller.getQuery()}&limit=20&offset=${numberOfRows}`).then((response) => {
       response.json().then((results) => {
         Controller.updateTable(results);
       });
@@ -13,9 +16,7 @@ const Controller = {
   },
   search: (ev) => {
     ev.preventDefault();
-    const form = document.getElementById("form");
-    const data = Object.fromEntries(new FormData(form));
-    const response = fetch(`/search?q=${data.query}`).then((response) => {
+    fetch(`/search?q=${Controller.getQuery()}`).then((response) => {
       response.json().then((results) => {
         Controller.updateTable(results);
       });
