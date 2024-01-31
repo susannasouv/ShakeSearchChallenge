@@ -3,10 +3,10 @@
 Welcome to the Pulley Shakesearch Challenge! This repository contains a simple web app for searching text in the complete works of Shakespeare.
 
 ## Explanation of Changes
-#### As of Jan 30 2024, Tue.
 Changes made to the repo included:
 1. Adding logic to ensure case-insensitive* queries.
-    - *case types covered are lowercase, uppercase, and start case.
+    - *case types in text supported are lowercase, uppercase, and start case.
+    - above caveat only applies to the first word of the query
 2. Adding support for multi-word queries.
 3. Adding a default limit to the number of results returned on each initial query (20 as defined by the tests).
 4. Adding functionality to the "Load More" button.

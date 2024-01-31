@@ -107,15 +107,32 @@ func (s *Searcher) Search(query string, limit int, offset int) []string {
 	// Find the first word of the query in uppercase, lowercase, and capitalized forms
 	// since those are likely the only valid forms
 	maxNumberOfResults := limit + offset
-	idxs := s.SuffixArray.Lookup([]byte(strings.ToUpper(initialQuery)), -1)
-	idxs = append(idxs, s.SuffixArray.Lookup([]byte(strings.ToLower(initialQuery)), -1)...)
+	idxs := s.SuffixArray.Lookup([]byte(initialQuery), -1)
+
+	// NOTE: If allowed to use a version of Go beyond 1.15, would consider
+	// calling slices.Compact(idxs)
+	// instead of having to write a function to filter out duplicates.
+	idxMemberships := make(map[int]bool)
+	for _, idx := range idxs {
+		idxMemberships[idx] = true
+	}
+	idxMemberships = s.LookupAndFilterDuplicates(strings.ToUpper(initialQuery), idxMemberships)
+	idxMemberships = s.LookupAndFilterDuplicates(strings.ToLower(initialQuery), idxMemberships)
 	// Find capitalized form of query
 	r := []rune(initialQuery)
 	r[0] = unicode.ToUpper(r[0])
 	capitalizedQuery := string(r)
-	idxs = append(idxs, s.SuffixArray.Lookup([]byte(capitalizedQuery), -1)...)
+	idxMemberships = s.LookupAndFilterDuplicates(capitalizedQuery, idxMemberships)
+
+	idxs = []int{}
+	for idx, membership := range idxMemberships {
+		if membership {
+			idxs = append(idxs, idx)
+		}
+	}
 
 	sort.Ints(idxs)
+
 	results := []string{}
 	for _, idx := range idxs {
 		fullQuery := initialQuery
@@ -140,4 +157,14 @@ func (s *Searcher) Search(query string, limit int, offset int) []string {
 		}
 	}
 	return results
+}
+
+func (s *Searcher) LookupAndFilterDuplicates(query string, idxMemberships map[int]bool) map[int]bool {
+	idxsFound := s.SuffixArray.Lookup([]byte(query), -1)
+	for _, idx := range idxsFound {
+		if !idxMemberships[idx] {
+			idxMemberships[idx] = true
+		}
+	}
+	return idxMemberships
 }
